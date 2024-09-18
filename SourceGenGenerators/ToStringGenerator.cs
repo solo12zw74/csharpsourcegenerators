@@ -55,7 +55,7 @@ public class ToStringGenerator : IIncrementalGenerator
 
     private static void Execute(SourceProductionContext context, ClassToGenerate classToGenerate)
     {
-        var namespaceName = classToGenerate.NamespaceName;
+        var namespaceName = classToGenerate. NamespaceName;
         var className = classToGenerate.ClassName;
         var fileName = $"{namespaceName}.{className}.g.cs";
 

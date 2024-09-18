@@ -1,2 +1,8 @@
 ﻿namespace SourceGenGenerators;
-public sealed record ClassToGenerate(string NamespaceName, string ClassName, List<string> Properties);
+
+public sealed class ClassToGenerate(string namespaceName, string className, IEnumerable<string> properties)
+{
+    public string NamespaceName { get; } = namespaceName;
+    public string ClassName { get; } = className;
+    public IEnumerable<string> Properties { get; } = properties;
+}
