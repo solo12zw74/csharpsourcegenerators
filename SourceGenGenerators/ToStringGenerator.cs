@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -8,14 +9,15 @@ namespace SourceGenGenerators;
 [Generator]
 public class ToStringGenerator : IIncrementalGenerator
 {
-    
-    private static IDictionary<string,int> _countPerFilename = new Dictionary<string, int>();
+    private static readonly IDictionary<string, int> _countPerFilename = new Dictionary<string, int>();
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var classes = context.SyntaxProvider.CreateSyntaxProvider(
                 static (syntaxNode, _) => IsTargetNode(syntaxNode),
                 static (ctx, _) => GetSyntaxNodeNodeForTransform(ctx))
-            .Where(v => v != null);
+            .Where(v => v != null)
+            .Collect();
 
         context.RegisterSourceOutput(classes, Execute!);
         context.RegisterPostInitializationOutput(PostInitializationOutput);
@@ -56,42 +58,41 @@ public class ToStringGenerator : IIncrementalGenerator
             """);
     }
 
-    private static void Execute(SourceProductionContext context, ClassToGenerate classToGenerate)
+    private static void Execute(SourceProductionContext context, ImmutableArray<ClassToGenerate> classesToGenerates)
     {
-        var namespaceName = classToGenerate.NamespaceName;
-        var className = classToGenerate.ClassName;
-        var fileName = $"{namespaceName}.{className}.g.cs";
-        
-        if (_countPerFilename.ContainsKey(fileName))
+        foreach (var classToGenerate in classesToGenerates)
         {
-            _countPerFilename[fileName]++;
-        }
-        else
-        {
-            _countPerFilename[fileName] = 1;
-        }
+            var namespaceName = classToGenerate.NamespaceName;
+            var className = classToGenerate.ClassName;
+            var fileName = $"{namespaceName}.{className}.g.cs";
 
-        var sb = new StringBuilder();
-        sb.Append(
-            $$"""
-              // Generation count {{_countPerFilename[fileName]}}
-              namespace {{namespaceName}};
-              partial class {{className}}
-              {
-                  public override string ToString()
+            if (_countPerFilename.ContainsKey(fileName))
+                _countPerFilename[fileName]++;
+            else
+                _countPerFilename[fileName] = 1;
+
+            var sb = new StringBuilder();
+            sb.Append(
+                $$"""
+                  // Generation count {{_countPerFilename[fileName]}}
+                  namespace {{namespaceName}};
+                  partial class {{className}}
                   {
-              """);
-        var toStringValue = string.Join(", ", classToGenerate.Properties
-            .Select(property => $"{property} = {{{property}}}"));
+                      public override string ToString()
+                      {
+                  """);
+            var toStringValue = string.Join(", ", classToGenerate.Properties
+                .Select(property => $"{property} = {{{property}}}"));
 
-        sb.AppendLine();
-        sb.Append(
-            $$"""
-                      return $"{{className}}: {{toStringValue}}";
+            sb.AppendLine();
+            sb.Append(
+                $$"""
+                          return $"{{className}}: {{toStringValue}}";
+                      }
                   }
-              }
-              """);
-        context.AddSource(fileName, sb.ToString());
+                  """);
+            context.AddSource(fileName, sb.ToString());
+        }
     }
 
     private static IEnumerable<string> GetProperties(INamedTypeSymbol source)
