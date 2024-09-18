@@ -8,6 +8,8 @@ namespace SourceGenGenerators;
 [Generator]
 public class ToStringGenerator : IIncrementalGenerator
 {
+    
+    private static IDictionary<string,int> _countPerFilename = new Dictionary<string, int>();
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var classes = context.SyntaxProvider.CreateSyntaxProvider(
@@ -59,10 +61,20 @@ public class ToStringGenerator : IIncrementalGenerator
         var namespaceName = classToGenerate.NamespaceName;
         var className = classToGenerate.ClassName;
         var fileName = $"{namespaceName}.{className}.g.cs";
+        
+        if (_countPerFilename.ContainsKey(fileName))
+        {
+            _countPerFilename[fileName]++;
+        }
+        else
+        {
+            _countPerFilename[fileName] = 1;
+        }
 
         var sb = new StringBuilder();
         sb.Append(
             $$"""
+              // Generation count {{_countPerFilename[fileName]}}
               namespace {{namespaceName}};
               partial class {{className}}
               {
