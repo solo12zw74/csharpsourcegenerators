@@ -39,7 +39,8 @@ public class ToStringGenerator : IIncrementalGenerator
 
         return classSymbol.GetAttributes()
             .Any(a => attributeSymbol.Equals(a.AttributeClass, SymbolEqualityComparer.Default))
-            ? new ClassToGenerate(classSymbol.ContainingNamespace.ToDisplayString(), classSymbol.Name, GetProperties(classDeclarationSyntax))
+            ? new ClassToGenerate(classSymbol.ContainingNamespace.ToDisplayString(), classSymbol.Name,
+                GetProperties(classSymbol))
             : null;
     }
 
@@ -55,7 +56,7 @@ public class ToStringGenerator : IIncrementalGenerator
 
     private static void Execute(SourceProductionContext context, ClassToGenerate classToGenerate)
     {
-        var namespaceName = classToGenerate. NamespaceName;
+        var namespaceName = classToGenerate.NamespaceName;
         var className = classToGenerate.ClassName;
         var fileName = $"{namespaceName}.{className}.g.cs";
 
@@ -81,10 +82,10 @@ public class ToStringGenerator : IIncrementalGenerator
         context.AddSource(fileName, sb.ToString());
     }
 
-    private static IEnumerable<string> GetProperties(ClassDeclarationSyntax source)
+    private static IEnumerable<string> GetProperties(INamedTypeSymbol source)
     {
-        return source.Members.OfType<PropertyDeclarationSyntax>()
-            .Where(pds => pds.Modifiers.Any(SyntaxKind.PublicKeyword))
-            .Select(p => p.Identifier.Text);
+        return source.GetMembers()
+            .Where(pds => pds.Kind == SymbolKind.Property && pds.DeclaredAccessibility == Accessibility.Public)
+            .Select(p => p.Name);
     }
 }
