@@ -9,3 +9,8 @@ public partial class Person(string firstName, string? middleName, string lastNam
     public string LastName { get; } = lastName;
     public string MiddleName { get; } = middleName ?? "undefined";
 }
+
+public partial class Person
+{
+    public int Age { get; set; } = 20;
+}
